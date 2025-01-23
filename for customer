@@ -1,0 +1,359 @@
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <map>
+using namespace std;
+
+const int numFloors = 10;
+const int numRoomsPerFloor = 20;
+const int numAcRoomsPerFloor = 10;
+const int numNonAcRoomsPerFloor = 10;
+
+const int acRoomCostPerDay = 2000;
+const int nonAcRoomCostPerDay = 1300;
+
+void displayAvailableRooms(bool rooms[][numRoomsPerFloor], int floor, bool isAc, const string& bookingDate) {
+    cout << "Available " << (isAc ? "AC" : "Non-AC") << " rooms on Floor " << floor << " for " << bookingDate << ":\n";
+    bool anyAvailable = false;
+    for (int roomNumber = 0; roomNumber < numRoomsPerFloor; roomNumber++) {
+        if (!rooms[floor - 1][roomNumber] &&
+            ((isAc && roomNumber < numAcRoomsPerFloor) || (!isAc && roomNumber >= numAcRoomsPerFloor))) {
+            cout << "Room " << roomNumber + 1 << " (Suitable for 2 guests)\n";
+            anyAvailable = true;
+        }
+    }
+
+    if (!anyAvailable) {
+        cout << "All rooms on this floor are booked for " << bookingDate << ".\n";
+    }
+}
+
+// Function to validate a 10-digit phone number
+bool isValidPhoneNumber(const string& phoneNumber) {
+    return phoneNumber.length() == 10 && phoneNumber.find_first_not_of("0123456789") == string::npos;
+}
+
+// Function to book a room
+bool bookRoom(bool rooms[][numRoomsPerFloor], int floor, const string& bookingDate, map<string, vector<int>>& bookedRooms) {
+    vector<int> selectedRooms; // Store the selected rooms for this booking
+
+    bool isAc;
+    while (true) {
+        cout << "Do you want an AC room? (1 for AC, 0 for non-AC): ";
+        cin >> isAc;
+        if (isAc == 0 || isAc == 1) {
+            break;
+        } else {
+            cout << "Invalid choice. Please enter 1 for AC or 0 for non-AC.\n";
+        }
+    }
+
+    displayAvailableRooms(rooms, floor, isAc, bookingDate);
+
+    bool anyAvailable = false;
+    for (int roomNumber = 0; roomNumber < numRoomsPerFloor; roomNumber++) {
+        if (!rooms[floor - 1][roomNumber] &&
+            ((isAc && roomNumber < numAcRoomsPerFloor) || (!isAc && roomNumber >= numAcRoomsPerFloor))) {
+            anyAvailable = true;
+            break;
+        }
+    }
+
+    if (!anyAvailable) {
+        cout << "All rooms on this floor are booked for " << bookingDate << ".\n";
+        return false; // Booking failed
+    }
+
+    int numRooms;
+    cout << "Enter the number of days you want to stay: ";
+    int numDays;
+    cin >> numDays;
+
+    if (numDays < 1) {
+        cout << "Invalid number of days. Please stay for at least 1 day.\n";
+        return false; // Booking failed
+    }
+
+    int maxRoomsAvailable = (isAc ? numAcRoomsPerFloor : numNonAcRoomsPerFloor);
+
+    int totalCost = 0;
+
+    cout << "Enter the number of rooms you want to book: ";
+    cin >> numRooms;
+    
+    if (numRooms > maxRoomsAvailable) {
+        cout << "Sorry, we don't have that many " << (isAc ? "AC" : "non-AC") << " rooms on a single floor. There are only " << maxRoomsAvailable << " rooms available.\n";
+        return false; // Booking failed
+    }
+
+    for (int i = 0; i < numRooms; i++) {
+        int roomNumber;
+        cout << "Enter the room number for room " << (i + 1) << ": ";
+        cin >> roomNumber;
+
+        if (roomNumber < 1 || roomNumber > numRoomsPerFloor) {
+            cout << "Invalid room number. Please enter a number between 1 and " << numRoomsPerFloor << ".\n";
+            return false; // Booking failed
+        }
+
+        if (rooms[floor - 1][roomNumber - 1]) {
+            cout << "Room " << roomNumber << " is already booked for " << bookingDate << ".\n";
+            return false; // Booking failed
+        }
+
+        selectedRooms.push_back(roomNumber);
+        totalCost += (isAc ? acRoomCostPerDay : nonAcRoomCostPerDay) * numDays;
+    }
+
+    // Check for duplicate room selections
+    for (int i = 0; i < numRooms - 1; i++) {
+        for (int j = i + 1; j < numRooms; j++) {
+            if (selectedRooms[i] == selectedRooms[j]) {
+                cout << "Room " << selectedRooms[i] << " is selected more than once. Booking process canceled.\n";
+                return false; // Booking failed
+            }
+        }
+    }
+
+    // Gather customer information
+    string name, phoneNumber, aadhaar, profession;
+    int age;
+
+    cout << "Please provide your information (or type 'stop' to cancel):\n";
+    cout << "Name: ";
+    cin.ignore();
+    getline(cin, name);
+
+    if (name == "stop") {
+        cout << "Booking process canceled.\n";
+        return false; // Booking failed
+    }
+
+    cout << "Phone Number (10 digits): ";
+    cin >> phoneNumber;
+
+    if (phoneNumber == "stop") {
+        cout << "Booking process canceled.\n";
+        return false; // Booking failed
+    } else if (!isValidPhoneNumber(phoneNumber)) {
+        cout << "Invalid phone number. It must be 10 digits. Booking process canceled.\n";
+        return false; // Booking failed
+    }
+
+    cout << "Aadhaar Card (12 digits): ";
+    cin >> aadhaar;
+
+    if (aadhaar == "stop") {
+        cout << "Booking process canceled.\n";
+        return false; // Booking failed
+    } else if (aadhaar.length() != 12) {
+        cout << "Aadhaar card must be 12 digits. Booking process canceled.\n";
+        return false; // Booking failed
+    }
+
+    cout << "Age: ";
+    cin >> age;
+
+    cout << "Profession: ";
+    cin.ignore();
+    getline(cin, profession);
+
+    // Ask for an advance payment
+    int advancePaymentAmount = 0;
+    cout << "Total Cost for " << name << "'s stay: " << totalCost * numRooms << " INR\n";
+
+    if (numRooms == 1) {
+        while (advancePaymentAmount <= 300) {
+            cout << "Enter an advance payment (more than 300 INR or type 'stop' to cancel): ";
+            string advancePayment;
+            cin >> advancePayment;
+
+            if (advancePayment == "stop") {
+                cout << "Booking process canceled.\n";
+                return false; // Booking failed
+            }
+
+            istringstream(advancePayment) >> advancePaymentAmount;
+            if (advancePaymentAmount < 300) {
+                cout << "The advance payment must be more than 300 INR.\n";
+            }
+        }
+    } else if (numRooms == 2) {
+        while (advancePaymentAmount <= 600) {
+            cout << "Enter an advance payment (more than 600 INR or type 'stop' to cancel): ";
+            string advancePayment;
+            cin >> advancePayment;
+
+            if (advancePayment == "stop") {
+                cout << "Booking process canceled.\n";
+                return false; // Booking failed
+            }
+
+            istringstream(advancePayment) >> advancePaymentAmount;
+            if (advancePaymentAmount < 600) {
+                cout << "The advance payment must be more than 600 INR.\n";
+            }
+        }
+    } else {
+        while (advancePaymentAmount <= 900) {
+            cout << "Enter an advance payment (more than 900 INR or type 'stop' to cancel): ";
+            string advancePayment;
+            cin >> advancePayment;
+
+            if (advancePayment == "stop") {
+                cout << "Booking process canceled.\n";
+                return false; // Booking failed
+            }
+
+            istringstream(advancePayment) >> advancePaymentAmount;
+            if (advancePaymentAmount < 900) {
+                cout << "The advance payment must be more than 900 INR.\n";
+            }
+        }
+    }
+
+    int remainingBalance = totalCost * numRooms - advancePaymentAmount;
+    cout << "Advance Payment: " << advancePaymentAmount << " INR\n";
+    cout << "Remaining Balance: " << remainingBalance << " INR\n";
+
+    cout << "Thank you, " << name << "! Your room has been booked for " << numDays << " days starting on " << bookingDate << ".\n";
+    
+
+    // Mark the selected rooms as booked for the specific date
+    bookedRooms[bookingDate] = selectedRooms;
+    for (int i = 0; i < numRooms; i++) {
+        rooms[floor - 1][selectedRooms[i] - 1] = true;
+    }
+
+    return true; // Booking succeeded
+}
+bool checkOutGuests(bool rooms[][numRoomsPerFloor], int floor, const string& bookingDate, map<string, vector<int>>& bookedRooms) {
+    cout << "Checking out guests on Floor " << floor << " for " << bookingDate << ":\n";
+
+    if (bookedRooms.find(bookingDate) != bookedRooms.end()) {
+        vector<int>& bookedRoomNumbers = bookedRooms[bookingDate];
+
+        int totalCost = 0;
+        int totalAdvancePayments = 0;
+
+        for (int roomNumber : bookedRoomNumbers) {
+            if (rooms[floor - 1][roomNumber - 1]) {
+                cout << "Room " << roomNumber << " has been checked out.\n";
+                rooms[floor - 1][roomNumber - 1] = false;
+
+                // Calculate the cost of the checked-out room
+                totalCost += (rooms[floor - 1][roomNumber - 1] ? acRoomCostPerDay : nonAcRoomCostPerDay);
+
+                // Subtract advance payments made for this room
+                totalAdvancePayments += (rooms[floor - 1][roomNumber - 1] ? 300 : 600); // Adjust this based on your payment logic
+            } else {
+                cout << "Room " << roomNumber << " was not booked for " << bookingDate << ".\n";
+            }
+        }
+
+        // Remove the booking record for the checked-out rooms
+        bookedRooms.erase(bookingDate);
+
+        // Calculate the remaining bill for the checked-out rooms
+        int remainingBalance = totalCost - totalAdvancePayments;
+        cout << "Remaining Bill: " << remainingBalance << " INR\n";
+
+        return true; // Check-out succeeded
+    } else {
+        cout << "No rooms are booked for " << bookingDate << " on Floor " << floor << ".\n";
+        return false; // Check-out failed
+    }
+}
+
+
+// Function to display details about room type, including cost and facilities
+void displayRoomDetails(bool isAc) {
+    cout << "Room Type: " << (isAc ? "AC" : "Non-AC") << " Room (Suitable for 2 guests)\n";
+    cout << "Cost per day: " << (isAc ? acRoomCostPerDay : nonAcRoomCostPerDay) << " INR\n";
+    cout << "Facilities: ";
+    if (isAc) {
+        cout << "AC, one double cot bed, TV, geyser, bedsheets, windows\n";
+    } else {
+        cout << "One double cot bed, TV, geyser, bedsheets, windows\n";
+    }
+}
+
+int main() {
+    bool rooms[numFloors][numRoomsPerFloor] = {0}; // Initialize all rooms as available
+    map<string, vector<int>> bookedRooms; // Map to store booked rooms by date
+    int choice;
+    while (true) {
+        cout << "\nWelcome to the Hotel! Please choose an option:\n";
+        cout << "1. Check room availability\n";
+        cout << "2. Book a room\n";
+        cout << "3. Check-out guests\n"; // Added check-out option
+        cout << "4. Display Room Details\n";
+        cout << "5. Exit\n"; // Updated option number
+
+        cin >> choice;
+
+        if (choice == 1) {
+        	int floor;
+            cout << "Enter the floor number (1-" << numFloors << "): ";
+            cin >> floor;
+
+            if (floor >= 1 && floor <= numFloors) {
+                bool isAc;
+                cout << "Do you want an AC room? (1 for AC, 0 for non-AC): ";
+                cin >> isAc;
+                string bookingDate;
+                cout << "Enter the booking date (YYYY-MM-DD): ";
+                cin >> bookingDate;
+                displayAvailableRooms(rooms, floor, isAc, bookingDate);
+            } else {
+                cout << "Invalid floor number. Please enter a number between 1 and " << numFloors << ".\n";
+            }
+            // ... (The existing room availability check code remains the same)
+        } else if (choice == 2) {
+        	int floor;
+            cout << "Enter the floor number (1-" << numFloors << "): ";
+            cin >> floor;
+            if (floor >= 1 && floor <= numFloors) {
+                string bookingDate;
+                cout << "Enter the booking date (YYYY-MM-DD): ";
+                cin >> bookingDate;
+
+                if (bookRoom(rooms, floor, bookingDate, bookedRooms)) {
+                    cout << "Rooms booked successfully!\n";
+                }
+            } else {
+                cout << "Invalid floor number. Please enter a number between 1 and " << numFloors << ".\n";
+            }
+            // ... (The existing room booking code remains the same)
+        } else if (choice == 3) {
+            int floor;
+            cout << "Enter the floor number (1-" << numFloors << "): ";
+            cin >> floor;
+            if (floor >= 1 && floor <= numFloors) {
+                string bookingDate;
+                cout << "Enter the booking date (YYYY-MM-DD): ";
+                cin >> bookingDate;
+
+                if (checkOutGuests(rooms, floor, bookingDate, bookedRooms)) {
+                    cout << "Guests checked out successfully!\n";
+                }
+            } else {
+                cout << "Invalid floor number. Please enter a number between 1 and " << numFloors << ".\n";
+            }
+        } else if (choice == 4) {
+        	bool isAc;
+            cout << "Do you want to view details for an AC room? (1 for AC, 0 for non-AC): ";
+            cin >> isAc;
+            displayRoomDetails(isAc);
+            // ... (The existing room details display code remains the same)
+        } else if (choice == 5) {
+            cout << "Thank you for using our hotel booking system. Goodbye!\n";
+            break; // Exit the program
+        } else {
+            cout << "Invalid choice. Please select a valid option (1-5).\n";
+        }
+    }
+
+    return 0;
+}
